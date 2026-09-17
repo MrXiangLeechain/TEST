@@ -49,6 +49,25 @@ h2.t .tag{font-size:12px;font-weight:400;color:var(--sub)}
 .chip:hover{border-color:var(--brand);color:var(--brand)}
 .chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .chip .n{opacity:.65;font-size:11px;margin-left:4px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.pcard{
+  border:1px solid var(--line);border-radius:11px;background:#fff;padding:12px 14px;
+  cursor:pointer;text-align:left;font-family:inherit;transition:.15s;
+}
+.pcard:hover{border-color:var(--brand);background:#fbfcff}
+.pcard.on{border-color:var(--brand);background:var(--brand-weak);box-shadow:0 0 0 2px rgba(47,110,245,.10)}
+.pcard .pn{font-size:14px;font-weight:600;color:var(--text);line-height:1.45;word-break:break-word}
+.pcard .pn .tag{font-size:11px;font-weight:500;color:var(--brand);background:#e5edff;border-radius:5px;padding:1px 6px;margin-left:6px}
+.pcard .pm{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--sub);margin-top:8px}
+.pcard .pm b{color:var(--text);font-weight:600}
+.pcard .bar{margin:9px 0 0}
+.qbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 14px;margin-top:16px;
+  border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:var(--shadow);
+}
+.qbar .qi{font-size:13px;color:var(--sub)}
+.qbar .qi b{color:var(--text)}
+.qbar .spacer{flex:1;min-width:0}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .btn{
   padding:9px 18px;border-radius:9px;border:1px solid var(--line);background:#fff;
@@ -145,12 +164,13 @@ kbd{background:#f0f2f5;border:1px solid var(--line);border-bottom-width:2px;bord
 
 <div class="wrap">
 
-<!-- ========== 练习 ========== -->
+<!-- ========== 练习：界面① 选试卷 ========== -->
 <div id="tab-practice">
+ <div id="pick">
   <div class="card">
     <h2 class="t">选择试卷 <span class="tag">共 <b id="totalN">0</b> 道选择题</span></h2>
-    <div class="chips" id="papers"></div>
-    <div class="row" style="margin-top:14px">
+    <div class="pgrid" id="papers"></div>
+    <div class="row" style="margin-top:16px">
       <span style="font-size:13px;color:var(--sub)">模式</span>
       <div class="seg" id="mode">
         <button data-m="learn">学习模式（直接看答案）</button>
@@ -175,8 +195,10 @@ kbd{background:#f0f2f5;border:1px solid var(--line);border-bottom-width:2px;bord
       <button class="btn sm" id="clearMaster">清除掌握标记</button>
     </div>
   </div>
-  <div id="quiz" class="hide"></div>
-  <div id="result" class="hide"></div>
+ </div>
+ <!-- 界面② 答题（与选卷界面互斥显示） -->
+ <div id="quiz" class="hide"></div>
+ <div id="result" class="hide"></div>
 </div>
 
 <!-- ========== 错题本 ========== -->
@@ -245,26 +267,68 @@ function toggleMaster(id){ if(st.master[id]) delete st.master[id]; else st.maste
 function markWrong(id){ st.wrong[id] = {t:Date.now(), fixed:0}; }
 function markFixed(id){ if(st.wrong[id]) st.wrong[id].fixed = 1; }
 
-/* ---------- 渲染：试卷选择 ---------- */
+/* ---------- 界面①：试卷选择（卡片式） ---------- */
+function paperCard(name, items, isAll){
+  const n  = items.length;
+  const dn = items.filter(i=> recOf(i.id)).length;
+  const ok = items.filter(i=>{ const r = recOf(i.id); return r && r.last===1; }).length;
+  const wg = items.filter(i=> st.wrong[i.id] && !st.wrong[i.id].fixed).length;
+  const mn = items.filter(i=> isMaster(i.id)).length;
+  const dp = n ? Math.round(dn/n*100) : 0;
+  const mp = n ? Math.round(mn/n*100) : 0;
+  const on = isAll ? (!st.sel || st.sel==='ALL') : (st.sel===name);
+  const b = document.createElement('button');
+  b.className = 'pcard' + (on ? ' on' : '');
+  b.innerHTML =
+      '<div class="pn">'+esc(name)+(on?'<span class="tag">已选</span>':'')+'</div>'
+    + '<div class="pm">'
+    +   '<span>题量 <b>'+n+'</b></span>'
+    +   '<span>已答 <b>'+dn+'</b></span>'
+    +   '<span>正确率 <b>'+(dn?Math.round(ok/dn*100):0)+'%</b></span>'
+    +   '<span>错题 <b>'+wg+'</b></span>'
+    +   '<span>已掌握 <b>'+mn+'</b></span>'
+    + '</div>'
+    + '<div class="bar"><i style="width:'+dp+'%"></i></div>'
+    + '<div class="bar"><i style="width:'+mp+'%;background:#8fb2ff"></i></div>';
+  b.onclick = ()=>{ st.sel = isAll ? 'ALL' : name; save(); renderPapers(); };
+  return b;
+}
 function renderPapers(){
   const box = document.getElementById('papers');
   box.innerHTML = '';
-  const all = document.createElement('button');
-  all.className = 'chip' + (!st.sel || st.sel==='ALL' ? ' on':'');
-  all.innerHTML = '全部 <span class="n">' + ITEMS.length + '</span>';
-  all.onclick = ()=>{ st.sel='ALL'; save(); renderPapers(); };
-  box.appendChild(all);
+  box.appendChild(paperCard('全部题目', ITEMS, true));
   PAPERS.forEach(p=>{
-    const n = ITEMS.filter(i=>i.paper===p).length;
-    const b = document.createElement('button');
-    b.className = 'chip' + (st.sel===p ? ' on':'');
-    b.innerHTML = esc(p) + ' <span class="n">' + n + '</span>';
-    b.onclick = ()=>{ st.sel = (st.sel===p? null : p); if(!st.sel) st.sel='ALL'; save(); renderPapers(); };
-    box.appendChild(b);
+    box.appendChild(paperCard(p, ITEMS.filter(i=> i.paper===p), false));
   });
+  const sel = (!st.sel || st.sel==='ALL') ? null : st.sel;
   document.getElementById('totalN').textContent =
-    (!st.sel || st.sel==='ALL') ? ITEMS.length : ITEMS.filter(i=>i.paper===st.sel).length;
+    sel ? ITEMS.filter(i=>i.paper===sel).length : ITEMS.length;
 }
+
+/* ---------- 界面切换 ---------- */
+function enterQuiz(){
+  document.getElementById('pick').classList.add('hide');
+  document.getElementById('quiz').classList.remove('hide');
+  document.getElementById('result').classList.add('hide');
+  const tb = document.querySelector('.tabs'); if(tb) tb.classList.add('hide');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function backPick(){
+  document.getElementById('quiz').classList.add('hide');
+  document.getElementById('result').classList.add('hide');
+  document.getElementById('pick').classList.remove('hide');
+  const tb = document.querySelector('.tabs'); if(tb) tb.classList.remove('hide');
+  list = []; idx = 0; runAns = {}; locked = false; showAnsExam = false;
+  renderPapers(); renderStat(); renderWrong();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function curName(){
+  if(src === 'wrong') return '错题重做';
+  const m = {}; list.forEach(i=> m[i.paper] = 1);
+  const ks = Object.keys(m);
+  return ks.length === 1 ? ks[0] : '全部题目';
+}
+const MODE_CN = {learn:'学习模式', drill:'练习模式', exam:'考试模式'};
 
 /* ---------- 开始 ---------- */
 function buildList(pool){
@@ -280,10 +344,8 @@ function start(kind, pool){
   st.cur = {kind:kind, ids:list.map(i=>i.id)};
   if(kind === 'paper') st.sel = st.sel || 'ALL';
   save();
-  document.getElementById('result').classList.add('hide');
-  document.getElementById('quiz').classList.remove('hide');
+  enterQuiz();
   renderQ();
-  window.scrollTo({top:0, behavior:'smooth'});
 }
 document.getElementById('start').onclick = ()=>{
   const sel = (!st.sel || st.sel==='ALL') ? null : st.sel;
@@ -302,9 +364,8 @@ document.getElementById('conti').onclick = ()=>{
   idx = 0; runAns = {}; locked = false;
   // 跳到第一道未作答的题
   for(let i=0;i<list.length;i++){ if(!recOf(list[i].id)){ idx = i; break; } }
-  document.getElementById('result').classList.add('hide');
-  document.getElementById('quiz').classList.remove('hide');
-  renderQ(); window.scrollTo({top:0, behavior:'smooth'});
+  enterQuiz();
+  renderQ();
 };
 document.getElementById('reset').onclick = ()=>{
   const sel = (!st.sel || st.sel==='ALL') ? null : st.sel;
@@ -361,6 +422,13 @@ function renderQ(){
     : list.filter(i=> (runAns[i.id] || recOf(i.id))).length;
   const doneLabel = learn ? '已掌握' : '已答';
   let h = '';
+  h += '<div class="qbar">'
+     + '<button class="btn sm" id="backPick">← 试卷列表</button>'
+     + '<span class="qi">当前：<b>'+esc(curName())+'</b></span>'
+     + '<span class="qi">模式：<b>'+(MODE_CN[st.mode]||st.mode)+'</b></span>'
+     + '<span class="spacer"></span>'
+     + '<span class="qi">进度 <b>'+(idx+1)+'</b> / '+list.length+'　'+doneLabel+' '+doneN+'</span>'
+     + '</div>';
   h += '<div class="card">';
   h += '<div class="meta"><span>'+esc(q.paper)+' · 第 '+q.no+' 题 · '+esc(q.type)
      + (learn && mas ? ' · <b style="color:var(--brand)">已掌握</b>' : '') + '</span>'
@@ -427,6 +495,7 @@ function renderQ(){
 
   const box = document.getElementById('quiz');
   box.innerHTML = h;
+  const bpk = document.getElementById('backPick'); if(bpk) bpk.onclick = backPick;
   box.querySelectorAll('.opt').forEach(b=> b.onclick = ()=> pick(b.dataset.k));
   box.querySelectorAll('.gn').forEach(b=> b.onclick = ()=>{ idx = +b.dataset.i; renderQ(); window.scrollTo({top:0,behavior:'smooth'}); });
   const p = document.getElementById('prevB'); if(p) p.onclick = ()=>{ if(idx>0){ idx--; renderQ(); window.scrollTo({top:0,behavior:'smooth'}); } };
@@ -488,7 +557,8 @@ function renderResult(right, total){
   h += '<div class="row" style="margin-top:12px">'
      + '<button class="btn pri sm" id="reviewWrong">只回顾错题（'+ (total-right) +'）</button>'
      + '<button class="btn sm" id="backAll">返回全部题目</button>'
-     + '<button class="btn sm" id="again">再刷一次</button></div>';
+     + '<button class="btn sm" id="again">再刷一次</button>'
+     + '<button class="btn sm" id="backPick2">← 返回试卷列表</button></div>';
   h += '</div>';
   h += '<div class="card"><h2 class="t">逐题回顾</h2><div class="list" id="revList"></div></div>';
   const box = document.getElementById('result');
@@ -519,6 +589,7 @@ function renderResult(right, total){
   document.getElementById('backAll').onclick = ()=>{
     rl.querySelectorAll('.li').forEach(el=> el.style.display='');
   };
+  document.getElementById('backPick2').onclick = backPick;
   document.getElementById('again').onclick = ()=>{ start(src, list.slice()); };
   window.scrollTo({top:0, behavior:'smooth'});
   renderWrong(); renderStat();
@@ -654,6 +725,7 @@ document.querySelectorAll('.tab').forEach(b=> b.onclick = ()=> switchTab(b.datas
 
 document.addEventListener('keydown', e=>{
   if(document.getElementById('tab-practice').classList.contains('hide')) return;
+  if(e.key === 'Escape' && document.getElementById('pick').classList.contains('hide')){ backPick(); return; }
   if(!list.length) return;
   const k = e.key.toUpperCase();
   if(k === 'M' && st.mode === 'learn'){ toggleMaster(list[idx].id); renderStat(); renderQ(); e.preventDefault(); return; }
