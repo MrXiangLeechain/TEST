@@ -25,6 +25,12 @@ header{
 .hd{max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .logo{font-weight:700;font-size:16px;letter-spacing:.2px}
 .logo small{display:block;font-weight:400;font-size:12px;color:var(--sub);letter-spacing:0}
+.home{
+  display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:8px;
+  border:1px solid var(--line);background:#fff;color:var(--sub);
+  font-size:13px;text-decoration:none;white-space:nowrap;
+}
+.home:hover{background:var(--brand-weak);color:var(--brand);border-color:#c3d7ff}
 .tabs{display:flex;gap:4px;margin-left:auto}
 .tab{
   padding:6px 14px;border-radius:8px;border:1px solid transparent;background:none;
@@ -129,6 +135,7 @@ kbd{background:#f0f2f5;border:1px solid var(--line);border-bottom-width:2px;bord
 <body>
 <header><div class="hd">
   <div class="logo">三级嵌入式 · 选择题刷题<small>35 套 · 1400 道单选</small></div>
+  <a class="home" href="index.html">← 首页</a>
   <div class="tabs">
     <button class="tab on" data-tab="practice">练习</button>
     <button class="tab" data-tab="wrong">错题本</button>
@@ -657,6 +664,12 @@ document.addEventListener('keydown', e=>{
 });
 
 renderPapers(); renderStat(); renderWrong();
+// 首页「继续上次」跳转：index.html?x=1#resume 或直接 xxx.html#resume
+if(location.hash === '#resume'){
+  const cb = document.getElementById('conti');
+  if(cb) cb.click();
+  history.replaceState(null, '', location.pathname + location.search);
+}
 </script>
 </body>
 </html>
