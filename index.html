@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>等级考试刷题站</title>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#fff; --line:#e3e6ea; --text:#1f2328; --sub:#6b7280;
+  --brand:#2f6fed; --brand-weak:#eaf1ff; --ok:#16a34a; --ok-weak:#e8f7ee;
+  --bad:#dc2626; --bad-weak:#fdecec; --warn:#d97706;
+  --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:940px;margin:0 auto;padding:0 16px 64px}
+header{background:#fff;border-bottom:1px solid var(--line)}
+.hd{max-width:940px;margin:0 auto;padding:22px 16px 20px}
+.logo{font-weight:700;font-size:22px;letter-spacing:.2px}
+.logo small{display:block;font-weight:400;font-size:13px;color:var(--sub);margin-top:4px}
+.hero{padding:20px 0 4px;color:var(--sub);font-size:14px}
+.hero b{color:var(--text)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;margin-top:18px}
+@media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:20px 22px 18px;box-shadow:var(--shadow);cursor:pointer;
+  transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
+  display:flex;flex-direction:column;gap:12px;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(16,24,40,.09);border-color:#c3d7ff}
+.badge{
+  display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;
+  background:var(--brand-weak);color:var(--brand);border:1px solid #c3d7ff;
+}
+.card h2{margin:0;font-size:19px;font-weight:700}
+.desc{margin:0;font-size:13px;color:var(--sub)}
+.nums{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--sub)}
+.nums b{font-size:17px;color:var(--text);font-weight:700;margin-right:3px}
+.bar{height:8px;border-radius:999px;background:#eceef1;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brand);border-radius:999px;transition:width .3s}
+.bar.m i{background:var(--ok)}
+.acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.btn{
+  padding:8px 16px;border-radius:9px;border:1px solid var(--line);background:#fff;
+  color:var(--text);font-size:14px;font-family:inherit;cursor:pointer;text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.btn:hover{background:#f3f5f8}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri:hover{background:#2560d8}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:disabled:hover{background:#fff}
+.tip{font-size:12px;color:var(--sub)}
+.resume{font-size:12px;color:var(--ok);font-weight:600}
+
+.total{
+  margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:14px;
+  padding:16px 20px;box-shadow:var(--shadow);display:flex;gap:26px;flex-wrap:wrap;align-items:center;
+}
+.total .k{font-size:22px;font-weight:700}
+.total .u{font-size:12px;color:var(--sub);font-weight:400;margin-left:3px}
+.foot{margin-top:26px;font-size:12.5px;color:var(--sub);line-height:1.9}
+.foot code{background:#eceef1;padding:1px 6px;border-radius:4px;font-size:12px}
+kbd{
+  background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;
+  padding:0 5px;font-size:11px;font-family:inherit;
+}
+</style>
+</head>
+<body>
+<header><div class="hd">
+  <div class="logo">等级考试刷题站<small>本地题库 · 离线可用 · 进度自动保存</small></div>
+</div></header>
+
+<div class="wrap">
+  <div class="hero">
+    共 <b id="sTotal">-</b> 道选择题 · <b id="sPaper">-</b> 套试卷。
+    点卡片进入对应科目，答题记录存在本机浏览器里，关掉再开仍在。
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="total" id="total"></div>
+
+  <div class="foot">
+    <div>三种模式：<b>学习</b>（直接看答案与解析）· <b>练习</b>（即时判分，答错自动进错题本）· <b>考试</b>（交卷后统一判分）</div>
+    <div>快捷键：<kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> 选择 · <kbd>←</kbd><kbd>→</kbd> 翻页 · <kbd>空格</kbd> 下一题 · <kbd>M</kbd> 标记已掌握</div>
+    <div>提示：两个科目的记录各自独立，互不干扰；错题本可导出 CSV。</div>
+  </div>
+</div>
+
+<script>
+const SUBJ = [{"code":"2C","name":"二级 C 语言","tag":"NCRE 二级","file":"quiz_choice.html","key":"c2quiz_v1","desc":"精选试卷 15 套 · 含程序题题干","n":596,"papers":15,"ana":596},{"code":"3J","name":"三级 嵌入式系统开发","tag":"NCRE 三级","file":"quiz_choice_qrs3jc.html","key":"qrs3quiz_v1","desc":"33 套真考 + 2 套新增 · 每套 40 题","n":1400,"papers":35,"ana":1400}];
+
+function readSt(key){
+  try{
+    const o = JSON.parse(localStorage.getItem(key) || '{}');
+    return {rec:o.rec||{}, wrong:o.wrong||{}, master:o.master||{}, cur:o.cur||null};
+  }catch(e){ return {rec:{}, wrong:{}, master:{}, cur:null}; }
+}
+function stat(s){
+  const st = readSt(s.key);
+  const ids = Object.keys(st.rec);
+  const right = ids.filter(k => st.rec[k] && st.rec[k].last === 1).length;
+  const wrongOpen = Object.values(st.wrong).filter(w => !w.fixed).length;
+  return {
+    done: ids.length,
+    acc: ids.length ? Math.round(right / ids.length * 100) : 0,
+    wrong: wrongOpen,
+    master: Object.keys(st.master).length,
+    hasCur: !!(st.cur && st.cur.ids && st.cur.ids.length)
+  };
+}
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  let tDone = 0, tRight = 0, tWrong = 0, tMaster = 0, tN = 0;
+
+  SUBJ.forEach(s=>{
+    const k = stat(s);
+    const pct = s.n ? Math.round(k.done / s.n * 100) : 0;
+    const mpct = s.n ? Math.round(k.master / s.n * 100) : 0;
+    tDone += k.done; tRight += Math.round(k.done * k.acc / 100);
+    tWrong += k.wrong; tMaster += k.master; tN += s.n;
+
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.dataset.file = s.file;
+    c.innerHTML =
+      '<div><span class="badge">' + esc(s.tag) + '</span></div>' +
+      '<h2>' + esc(s.name) + '</h2>' +
+      '<p class="desc">' + esc(s.desc) + ' · ' + s.papers + ' 套 · ' + s.n + ' 道选择题（' + s.ana + ' 道带解析）</p>' +
+      '<div class="nums">' +
+        '<span><b>' + k.done + '</b>/' + s.n + ' 已做</span>' +
+        '<span><b>' + k.acc + '%</b> 正确率</span>' +
+        '<span><b>' + k.wrong + '</b> 未攻克错题</span>' +
+        '<span><b>' + k.master + '</b> 已掌握</span>' +
+      '</div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="bar m"><i style="width:' + mpct + '%"></i></div>' +
+      '<div class="acts">' +
+        '<button class="btn pri" data-act="start">开始刷题 →</button>' +
+        '<button class="btn" data-act="resume"' + (k.hasCur ? '' : ' disabled') + '>继续上次</button>' +
+        (k.hasCur ? '<span class="resume">有未完成的一轮</span>'
+                  : '<span class="tip">暂无进行中的记录</span>') +
+      '</div>';
+    c.onclick = e => { go(s.file, e); };
+    grid.appendChild(c);
+  });
+
+  const acc = tDone ? Math.round(tRight / tDone * 100) : 0;
+  document.getElementById('total').innerHTML =
+      '<div><span class="k">' + tN + '</span><span class="u">题库总量</span></div>' +
+      '<div><span class="k">' + tDone + '</span><span class="u">已做</span></div>' +
+      '<div><span class="k">' + acc + '%</span><span class="u">总正确率</span></div>' +
+      '<div><span class="k">' + tMaster + '</span><span class="u">已掌握</span></div>' +
+      '<div><span class="k">' + tWrong + '</span><span class="u">未攻克错题</span></div>';
+  document.getElementById('sTotal').textContent = tN;
+  document.getElementById('sPaper').textContent = SUBJ.reduce((a,s)=>a+s.papers,0);
+}
+
+function go(file, e){
+  const act = e && e.target && e.target.dataset ? e.target.dataset.act : null;
+  location.href = file + (act === 'resume' ? '#resume' : '');
+}
+
+render();
+// 从子页返回时刷新进度
+window.addEventListener('pageshow', render);
+</script>
+</body>
+</html>
